@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IAM — Operation Zero Trust</title>
+<style>
+:root {
+  --bg:#080d19; --panel:#111b2d; --line:#263954;
+  --blue:#48c6ff; --green:#46edb0; --red:#ff637c;
+  --text:#edf5ff; --muted:#9eb1ca;
+}
+*{box-sizing:border-box}
+body {
+  margin:0;background:radial-gradient(ellipse at top,#14284a,var(--bg) 65%);
+  color:var(--text);font:16px/1.6 system-ui,Arial,sans-serif;
+  min-height:100vh;
+}
+header,main,footer{max-width:850px;margin:auto;padding:20px}
+header{display:flex;justify-content:space-between;align-items:center;
+  border-bottom:1px solid var(--line)}
+.logo{font-weight:900;letter-spacing:2px;color:var(--blue)}
+.pill{border:1px solid var(--line);padding:5px 12px;border-radius:30px;
+  color:var(--green);font-size:12px}
+.hero{padding:25px 0 12px}
+h1{font-size:clamp(30px,6vw,52px);line-height:1.1;margin:12px 0}
+h1 span{color:var(--blue)}
+.muted{color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:20px 0}
+.stat,.card{background:var(--panel);border:1px solid var(--line);
+  border-radius:16px;padding:16px}
+.stat strong{display:block;font-size:24px;color:var(--green)}
+.progress{height:6px;background:#24334b;border-radius:8px;overflow:hidden}
+#bar{height:100%;width:0;background:linear-gradient(90deg,var(--blue),var(--green));transition:.3s}
+.topline{display:flex;justify-content:space-between;gap:10px;
+  flex-wrap:wrap;margin:18px 0 8px;font-size:13px;color:var(--muted)}
+h2{font-size:24px;line-height:1.3}
+.options{display:grid;gap:10px;margin:20px 0}
+button{font:inherit;cursor:pointer}
+.option,.primary,.secondary{border-radius:12px;padding:14px 16px;
+  transition:.15s}
+.option{display:flex;gap:12px;text-align:left;color:var(--text);
+  background:#101a2a;border:1px solid var(--line);width:100%}
+.option:hover:not(:disabled){border-color:var(--blue);background:#172841}
+.option:disabled{cursor:default;opacity:1}
+.letter{color:var(--blue);font-weight:800}
+.option.correct{border-color:var(--green);background:#103329}
+.option.wrong{border-color:var(--red);background:#381c2a}
+.primary{background:var(--blue);color:#061321;font-weight:800;border:0}
+.secondary{background:transparent;color:var(--text);border:1px solid var(--line)}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+.actions button{flex:1;min-width:150px}
+.feedback{padding:14px;border-radius:12px;margin:15px 0;
+  background:#18283b;border:1px solid var(--line)}
+.hidden{display:none!important}
+footer{text-align:center;color:var(--muted);font-size:12px}
+.tag{color:var(--green);font-size:12px;letter-spacing:2px}
+@media(max-width:480px){header,main,footer{padding:15px}.stat{padding:10px}.stat strong{font-size:20px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">◈ CYBERCORE</div>
+  <div class="pill">● SIMULATION ACTIVE</div>
+</header>
+
+<main>
+<section class="hero">
+  <div class="tag">SECURITY TRAINING // 001</div>
+  <h1>OPERATION<br><span>ZERO TRUST</span></h1>
+  <p class="muted">Сіздің миссияңыз — цифрлық инфрақұрылымды қорғау.
+Жеке басты тексеріңіз, қолжетімділік құқықтарын басқарыңыз және қауіптің жолын кесіңіз.</p>
+</section>
+
+<div class="stats">
+  <div class="stat"><strong id="score">0</strong><small>XP / ОЧКИ</small></div>
+  <div class="stat"><strong id="timer">05:00</strong><small>ВРЕМЯ</small></div>
+  <div class="stat"><strong id="level">0/5</strong><small>МИССИИ</small></div>
+</div>
+
+<div class="progress"><div id="bar"></div></div>
+
+<section id="game" class="card" style="margin-top:18px">
+  <div class="topline">
+    <span id="mission">MISSION 01 / 05</span>
+    <span id="category">IDENTITY CONTROL</span>
+  </div>
+  <h2 id="title">Жүйе шешімді күтуде...</h2>
+  <p id="story" class="muted"></p>
+  <div id="options" class="options"></div>
+  <div id="feedback" class="feedback hidden" aria-live="polite"></div>
+  <div class="actions">
+    <button id="next" class="primary hidden">Келесі миссия →</button>
+  </div>
+</section>
+
+<section id="result" class="card hidden" style="margin-top:18px;text-align:center">
+  <div class="tag">MISSION REPORT</div>
+  <h2 id="resultTitle">Қауіпсіздік есебі</h2>
+  <p id="resultText"></p>
+  <div class="stats">
+    <div class="stat"><strong id="finalScore">0</strong><small>XP</small></div>
+    <div class="stat"><strong id="accuracy">0%</strong><small>ТОЧНОСТЬ</small></div>
+    <div class="stat"><strong id="rank">—</strong><small>РАНГ</small></div>
+  </div>
+  <button class="primary" onclick="startGame()">↻ Қайта бастау</button>
+</section>
+
+<p class="muted" style="font-size:12px;text-align:center">
+  IAM оқыту тренажеры. Барлық сценарийлер — ойдан шығарылған.
+</p>
+</main>
+<footer>CYBERCORE ACADEMY · IDENTITY & ACCESS MANAGEMENT</footer>
+
+<script>
+const missions = [
+{
+ category:"AUTHENTICATION",
+title:"🚪 Рұқсатсыз кіру",
+story:"Жаңа қызметкер корпоративтік порталға кіруге тырысады. Жүйе оның өзі мәлімдеген адам екеніне көз жеткізуі керек. Не істеу қажет?",
+options:[
+  "URL мекенжайын білетін кез келген адамға бірден қолжетімділік беру",
+  "Тіркелгі деректерін тексеріп, пайдаланушының жеке басын растау",
+  "Ешқандай тексерусіз кіруге рұқсат беру"
+],
+correct:1,
+explain:"Authentication (аутентификация) пайдаланушының жеке басын тексереді. Алайда аутентификациядан сәтті өту оған барлық ресурстарға қол жеткізуге рұқсат берілгенін білдірмейді."
+},
+{
+category:"LEAST PRIVILEGE",
+title:"🔐 Құпия деректерге қол жеткізу",
+story:"Бухгалтерге қаржылық есеп қажет. Ол сондай-ақ қызметтік міндеттеріне кірмейтін қызметкерлердің медициналық дерекқорына қол жеткізуді сұрайды. Қалай әрекет ету керек?",
+options:[
+  "Ыңғайлы болуы үшін барлық құқықтарды беру",
+  "Жұмысқа қажетті рұқсаттарды ғана беру",
+  "Бухгалтерге әкімші құқықтарын беру"
+],
+correct:1,
+explain:"Least Privilege — ең аз артықшылықтар қағидаты. Пайдаланушыға өз міндеттерін орындауға қажетті құқықтар ғана беріледі."
+},
+{
+category:"MULTI-FACTOR AUTHENTICATION",
+title:"📱 Ұрланған құпиясөз",
+story:"Оқиғалар журналында жаңа құрылғыдан кіру әрекеті анықталды. Құпиясөз дұрыс, бірақ оның ұрланғанына күдік бар. Қандай механизм қосымша қорғаныс деңгейін қамтамасыз етеді?",
+options:[
+  "Оқиғаларды тіркеуді өшіру",
+  "MFA қосып, күдікті кіру әрекетін тексеру",
+  "Құпиясөзді барлық қызметкерлерге тарату"
+],
+correct:1,
+explain:"MFA аутентификацияның екі немесе одан да көп түрлі факторын пайдаланады. Күдікті әрекеттерді де бағалап, қажет болған жағдайда бұғаттау керек."
+},
+{
+category:"DEPROVISIONING",
+title:"🚨 Қызметкер жұмыстан босатылды",
+story:"Қызметкер компаниядан кеткенімен, оның тіркелгісі әлі де белсенді. Кеше осы тіркелгі арқылы жүйеге сәтті кірген. Қандай әрекет жасау қажет?",
+options:[
+  "Айдың соңына дейін ештеңе істемеу",
+  "Тіркелгі атауын өзгерту",
+  "Процедураға сәйкес тіркелгіні өшіріп, белсенді сеанстар мен байланысты рұқсаттарды қайтарып алу"
+],
+correct:2,
+explain:"Deprovisioning — пайдаланушы компаниядан кеткен кезде оның қолжетімділік құқықтарын қайтарып алу үдерісі. Тіркелгіні өшіріп, белсенді сеанстар мен тіркелгі деректерінің күшін жою, сондай-ақ байланысты рұқсаттарды тексеру қажет."
+},
+{
+category:"ROLE-BASED ACCESS CONTROL",
+title:"🧩 Кімнің құқығы бар?",
+story:"Компанияда 200 қызметкер бар. Әкімші әр адамға құқықтарды қолмен береді, соның салдарынан қателер көбейіп келеді. Қолжетімділікті басқаруды қалай жеңілдетуге болады?",
+options:[
+  "RBAC: құқықтарды жұмыс рөлдеріне қарай тағайындау",
+  "Барлығына бірдей қолжетімділік беру",
+  "Қызметкерлерге өз құқықтарын өз бетінше өзгертуге рұқсат беру"
+],
+correct:0,
+explain:"RBAC рұқсаттарды «Бухгалтер» немесе «Менеджер» сияқты рөлдермен байланыстырады. Пайдаланушыларға сәйкес рөлдер тағайындалып, құқықтар жүйелі түрде қайта қаралады."
+}
+];
+
+let current=0, score=0, correctCount=0, locked=false;
+let remaining=300, clock=null, started=false, results=[];
+
+const $ = id => document.getElementById(id);
+
+function startGame(){
+ clearInterval(clock);
+ current=0; score=0; correctCount=0; remaining=300;
+ locked=false; started=true; results=[];
+ $("score").textContent="0";
+ $("timer").textContent="05:00";
+ $("level").textContent="0/5";
+ $("bar").style.width="0%";
+ $("game").classList.remove("hidden");
+ $("result").classList.add("hidden");
+ render();
+ clock=setInterval(()=>{
+  if(!started)return;
+  remaining--;
+  $("timer").textContent=
+   String(Math.floor(remaining/60)).padStart(2,"0")+":"+
+   String(remaining%60).padStart(2,"0");
+  if(remaining<=0)finish(true);
+ },1000);
+}
+
+function render(){
+ locked=false;
+ const m=missions[current];
+ $("mission").textContent=`МИССИЯ ${String(current+1).padStart(2,"0")} / 05`;
+ $("category").textContent=m.category;
+ $("title").textContent=m.title;
+ $("story").textContent=m.story;
+ $("level").textContent=`${current}/5`;
+ $("bar").style.width=`${current/5*100}%`;
+ $("feedback").classList.add("hidden");
+ $("next").classList.add("hidden");
+ $("options").innerHTML="";
+ m.options.forEach((opt,i)=>{
+  const b=document.createElement("button");
+  b.className="option";
+  const letter=document.createElement("span");
+  letter.className="letter";
+  letter.textContent=["A","B","C"][i];
+  const label=document.createElement("span");
+  label.textContent=opt;
+  b.append(letter,label);
+  b.onclick=()=>choose(i);
+  $("options").appendChild(b);
+ });
+}
+
+function choose(i){
+ if(locked||!started)return;
+ locked=true;
+ const m=missions[current];
+ const good=i===m.correct;
+ if(good){score+=100;correctCount++;}
+ results.push(good);
+ $("score").textContent=score;
+ [...$("options").children].forEach((b,j)=>{
+  b.disabled=true;
+  if(j===m.correct)b.classList.add("correct");
+  else if(j===i)b.classList.add("wrong");
+ });
+ $("feedback").classList.remove("hidden");
+ $("feedback").innerHTML="";
+ const heading=document.createElement("strong");
+ heading.textContent=good?"✓ Дұрыс шешім! +100 XP":"✕ Бұл шешім сәйкес келмейді";
+ const explanation=document.createElement("p");
+ explanation.textContent=m.explain;
+ explanation.style.marginBottom="0";
+ $("feedback").append(heading,explanation);
+ $("next").textContent=current===4?"Операцияны аяқтау →":"Келесі миссия →";
+ $("next").classList.remove("hidden");
+ $("next").onclick=()=>{
+  if(current<4){current++;render();}
+  else finish(false);
+ };
+}
+
+function finish(timeout){
+ started=false;
+ clearInterval(clock);
+ $("game").classList.add("hidden");
+ $("result").classList.remove("hidden");
+ $("bar").style.width="100%";
+ $("level").textContent="5/5";
+ $("resultTitle").textContent=timeout?"⏱ Уақыт аяқталды!":"🛡️ Операция аяқталды";
+ $("finalScore").textContent=score;
+ $("accuracy").textContent=Math.round(correctCount/5*100)+"%";
+ const rank=score===500?"S":score>=400?"A":score>=300?"B":score>=200?"C":"D";
+ $("rank").textContent=rank;
+ $("resultText").textContent=
+  `Дұрыс шешімдер саны: 5-тен ${correctCount}. `+
+  (score===500?"Керемет! Сен — IAM Security Architect.":
+   score>=300?"Жақсы жұмыс! Қателеріңді қайталап, қорғанысты күшейт.":
+   "Жүйеге қосымша қорғаныс қажет. Түсіндірмелерді оқып, қайтадан байқап көр.");
+}
+
+startGame();
+</script>
+</body>
+</html>
